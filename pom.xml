@@ -153,6 +153,11 @@
       <version>4.10</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>fr.nikokode</groupId>
+      <artifactId>commons</artifactId>
+      <version>1.1.0-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
   <repositories>
@@ -162,6 +167,23 @@
       <url>http://download.oracle.com/maven</url>
       <layout>default</layout>
     </repository>
+    <repository>
+      <id>github-nicosensei-snapshots</id>
+      <name>Snapshot Java packages from nicosensei's GitHub repo</name>
+      <url>https://github.com/nicosensei/maven-repo/master/snapshots</url>
+      <layout>default</layout>
+    </repository>
   </repositories>
+
+  <distributionManagement>
+    <repository>
+      <id>releases</id>
+      <url>https://github.com/nicosensei/maven-repo/raw/master/releases</url>
+    </repository>
+    <snapshotRepository>
+      <id>snapshots</id>
+      <url>https://github.com/nicosensei/maven-repo/raw/master/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
 
 </project>

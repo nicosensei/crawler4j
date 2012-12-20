@@ -19,6 +19,8 @@ package edu.uci.ics.crawler4j.crawler;
 
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
+
+import edu.uci.ics.crawler4j.crawler.traps.CrawlerTrapsDB;
 import edu.uci.ics.crawler4j.fetcher.PageFetcher;
 import edu.uci.ics.crawler4j.frontier.DocIDServer;
 import edu.uci.ics.crawler4j.frontier.Frontier;
@@ -26,419 +28,467 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 import edu.uci.ics.crawler4j.url.URLCanonicalizer;
 import edu.uci.ics.crawler4j.url.WebURL;
 import edu.uci.ics.crawler4j.util.IO;
+import fr.nikokode.commons.log.Log4jLogger;
+
 import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The controller that manages a crawling session. This class creates the
  * crawler threads and monitors their progress.
- * 
+ *
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
 public class CrawlController extends Configurable {
 
-	private static final Logger logger = Logger.getLogger(CrawlController.class.getName());
+    private static final Logger logger = Logger.getLogger(CrawlController.class.getName());
 
-	/**
-	 * The 'customData' object can be used for passing custom crawl-related
-	 * configurations to different components of the crawler.
-	 */
-	protected Object customData;
+    /**
+     * The 'customData' object can be used for passing custom crawl-related
+     * configurations to different components of the crawler.
+     */
+    protected Object customData;
 
-	/**
-	 * Once the crawling session finishes the controller collects the local data
-	 * of the crawler threads and stores them in this List.
-	 */
-	protected List<Object> crawlersLocalData = new ArrayList<Object>();
+    /**
+     * Once the crawling session finishes the controller collects the local data
+     * of the crawler threads and stores them in this List.
+     */
+    protected List<Object> crawlersLocalData = new ArrayList<Object>();
 
-	/**
-	 * Is the crawling of this session finished?
-	 */
-	protected boolean finished;
+    /**
+     * Is the crawling of this session finished?
+     */
+    protected boolean finished;
 
-	/**
-	 * Is the crawling session set to 'shutdown'. Crawler threads monitor this
-	 * flag and when it is set they will no longer process new pages.
-	 */
-	protected boolean shuttingDown;
+    /**
+     * Is the crawling session set to 'shutdown'. Crawler threads monitor this
+     * flag and when it is set they will no longer process new pages.
+     */
+    protected boolean shuttingDown;
 
-	protected PageFetcher pageFetcher;
-	protected RobotstxtServer robotstxtServer;
-	protected Frontier frontier;
-	protected DocIDServer docIdServer;
+    protected PageFetcher pageFetcher;
+    protected RobotstxtServer robotstxtServer;
+    protected Frontier frontier;
+    protected DocIDServer docIdServer;
 
-	protected final Object waitingLock = new Object();
+    /**
+     * The storage for crawler traps. Instantiated only if the {@link CrawlConfig}
+     * defines trap files to load at startup.
+     */
+    protected CrawlerTrapsDB crawlerTraps;
 
-	public CrawlController(CrawlConfig config, PageFetcher pageFetcher, RobotstxtServer robotstxtServer)
-			throws Exception {
-		super(config);
+    protected final Object waitingLock = new Object();
 
-		config.validate();
-		File folder = new File(config.getCrawlStorageFolder());
-		if (!folder.exists()) {
-			if (!folder.mkdirs()) {
-				throw new Exception("Couldn't create this folder: " + folder.getAbsolutePath());
-			}
-		}
+    public CrawlController(
+            CrawlConfig config,
+            PageFetcher pageFetcher,
+            RobotstxtServer robotstxtServer)
+            throws Exception {
+        super(config);
 
-		boolean resumable = config.isResumableCrawling();
+        config.validate();
+        File folder = new File(config.getCrawlStorageFolder());
+        if (!folder.exists()) {
+            if (!folder.mkdirs()) {
+                throw new Exception("Couldn't create this folder: " + folder.getAbsolutePath());
+            }
+        }
 
-		EnvironmentConfig envConfig = new EnvironmentConfig();
-		envConfig.setAllowCreate(true);
-		envConfig.setTransactional(resumable);
-		envConfig.setLocking(resumable);
+        boolean resumable = config.isResumableCrawling();
 
-		File envHome = new File(config.getCrawlStorageFolder() + "/frontier");
-		if (!envHome.exists()) {
-			if (!envHome.mkdir()) {
-				throw new Exception("Couldn't create this folder: " + envHome.getAbsolutePath());
-			}
-		}
-		if (!resumable) {
-			IO.deleteFolderContents(envHome);
-		}
+        EnvironmentConfig envConfig = new EnvironmentConfig();
+        envConfig.setAllowCreate(true);
+        envConfig.setTransactional(resumable);
+        envConfig.setLocking(resumable);
 
-		Environment env = new Environment(envHome, envConfig);
-		docIdServer = new DocIDServer(env, config);
-		frontier = new Frontier(env, config, docIdServer);
+        File envHome = new File(
+                config.getCrawlStorageFolder()
+                + File.separator + "frontier");
+        if (!envHome.exists()) {
+            if (!envHome.mkdir()) {
+                throw new Exception("Couldn't create this folder: " + envHome.getAbsolutePath());
+            }
+        }
+        if (!resumable) {
+            IO.deleteFolderContents(envHome);
+        }
 
-		this.pageFetcher = pageFetcher;
-		this.robotstxtServer = robotstxtServer;
+        Environment env = new Environment(envHome, envConfig);
+        docIdServer = new DocIDServer(env, config);
+        frontier = new Frontier(env, config, docIdServer);
 
-		finished = false;
-		shuttingDown = false;
-	}
+        this.pageFetcher = pageFetcher;
+        this.robotstxtServer = robotstxtServer;
 
-	/**
-	 * Start the crawling session and wait for it to finish.
-	 * 
-	 * @param _c
-	 *            the class that implements the logic for crawler threads
-	 * @param numberOfCrawlers
-	 *            the number of concurrent threads that will be contributing in
-	 *            this crawling session.
-	 */
-	public <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers) {
-		this.start(_c, numberOfCrawlers, true);
-	}
+        finished = false;
+        shuttingDown = false;
 
-	/**
-	 * Start the crawling session and return immediately.
-	 * 
-	 * @param _c
-	 *            the class that implements the logic for crawler threads
-	 * @param numberOfCrawlers
-	 *            the number of concurrent threads that will be contributing in
-	 *            this crawling session.
-	 */
-	public <T extends WebCrawler> void startNonBlocking(final Class<T> _c, final int numberOfCrawlers) {
-		this.start(_c, numberOfCrawlers, false);
-	}
+        // Load crawler traps if any were configured
+        Set<String> trapFiles = config.getCrawlerTrapsFiles();
+        if (!trapFiles.isEmpty()) {
+            crawlerTraps = new CrawlerTrapsDB(folder + File.separator + "traps");
+            for (String path : trapFiles) {
+                crawlerTraps.addCrawlerTrapsFromFile(path);
+                Log4jLogger.info(this, "Loaded crawler traps from " + path);
+            }
+        }
+    }
 
-	protected <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers, boolean isBlocking) {
-		try {
-			finished = false;
-			crawlersLocalData.clear();
-			final List<Thread> threads = new ArrayList<Thread>();
-			final List<T> crawlers = new ArrayList<T>();
+    /**
+     * Start the crawling session and wait for it to finish.
+     *
+     * @param _c
+     *            the class that implements the logic for crawler threads
+     * @param numberOfCrawlers
+     *            the number of concurrent threads that will be contributing in
+     *            this crawling session.
+     */
+    public <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers) {
+        this.start(_c, numberOfCrawlers, true);
+    }
 
-			for (int i = 1; i <= numberOfCrawlers; i++) {
-				T crawler = _c.newInstance();
-				Thread thread = new Thread(crawler, "Crawler " + i);
-				crawler.setThread(thread);
-				crawler.init(i, this);
-				thread.start();
-				crawlers.add(crawler);
-				threads.add(thread);
-				logger.info("Crawler " + i + " started.");
-			}
+    /**
+     * Start the crawling session and return immediately.
+     *
+     * @param _c
+     *            the class that implements the logic for crawler threads
+     * @param numberOfCrawlers
+     *            the number of concurrent threads that will be contributing in
+     *            this crawling session.
+     */
+    public <T extends WebCrawler> void startNonBlocking(final Class<T> _c, final int numberOfCrawlers) {
+        this.start(_c, numberOfCrawlers, false);
+    }
 
-			final CrawlController controller = this;
+    protected <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers, boolean isBlocking) {
+        try {
+            finished = false;
+            crawlersLocalData.clear();
+            final List<Thread> threads = new ArrayList<Thread>();
+            final List<T> crawlers = new ArrayList<T>();
 
-			Thread monitorThread = new Thread(new Runnable() {
+            for (int i = 1; i <= numberOfCrawlers; i++) {
+                T crawler = _c.newInstance();
+                Thread thread = new Thread(crawler, "Crawler " + i);
+                crawler.setThread(thread);
+                crawler.init(i, this);
+                thread.start();
+                crawlers.add(crawler);
+                threads.add(thread);
+                logger.info("Crawler " + i + " started.");
+            }
 
-				@Override
-				public void run() {
-					try {
-						synchronized (waitingLock) {
+            final CrawlController controller = this;
 
-							while (true) {
-								sleep(10);
-								boolean someoneIsWorking = false;
-								for (int i = 0; i < threads.size(); i++) {
-									Thread thread = threads.get(i);
-									if (!thread.isAlive()) {
-										if (!shuttingDown) {
-											logger.info("Thread " + i + " was dead, I'll recreate it.");
-											T crawler = _c.newInstance();
-											thread = new Thread(crawler, "Crawler " + (i + 1));
-											threads.remove(i);
-											threads.add(i, thread);
-											crawler.setThread(thread);
-											crawler.init(i + 1, controller);
-											thread.start();
-											crawlers.remove(i);
-											crawlers.add(i, crawler);
-										}
-									} else if (crawlers.get(i).isNotWaitingForNewURLs()) {
-										someoneIsWorking = true;
-									}
-								}
-								if (!someoneIsWorking) {
-									// Make sure again that none of the threads
-									// are
-									// alive.
-									logger.info("It looks like no thread is working, waiting for 10 seconds to make sure...");
-									sleep(10);
+            Thread monitorThread = new Thread(new Runnable() {
 
-									someoneIsWorking = false;
-									for (int i = 0; i < threads.size(); i++) {
-										Thread thread = threads.get(i);
-										if (thread.isAlive() && crawlers.get(i).isNotWaitingForNewURLs()) {
-											someoneIsWorking = true;
-										}
-									}
-									if (!someoneIsWorking) {
-										if (!shuttingDown) {
-											long queueLength = frontier.getQueueLength();
-											if (queueLength > 0) {
-												continue;
-											}
-											logger.info("No thread is working and no more URLs are in queue waiting for another 10 seconds to make sure...");
-											sleep(10);
-											queueLength = frontier.getQueueLength();
-											if (queueLength > 0) {
-												continue;
-											}
-										}
+                @Override
+                public void run() {
+                    try {
+                        synchronized (waitingLock) {
 
-										logger.info("All of the crawlers are stopped. Finishing the process...");
-										// At this step, frontier notifies the
-										// threads that were
-										// waiting for new URLs and they should
-										// stop
-										frontier.finish();
-										for (T crawler : crawlers) {
-											crawler.onBeforeExit();
-											crawlersLocalData.add(crawler.getMyLocalData());
-										}
+                            while (true) {
+                                sleep(10);
+                                boolean someoneIsWorking = false;
+                                for (int i = 0; i < threads.size(); i++) {
+                                    Thread thread = threads.get(i);
+                                    if (!thread.isAlive()) {
+                                        if (!shuttingDown) {
+                                            logger.info("Thread " + i + " was dead, I'll recreate it.");
+                                            T crawler = _c.newInstance();
+                                            thread = new Thread(crawler, "Crawler " + (i + 1));
+                                            threads.remove(i);
+                                            threads.add(i, thread);
+                                            crawler.setThread(thread);
+                                            crawler.init(i + 1, controller);
+                                            thread.start();
+                                            crawlers.remove(i);
+                                            crawlers.add(i, crawler);
+                                        }
+                                    } else if (crawlers.get(i).isNotWaitingForNewURLs()) {
+                                        someoneIsWorking = true;
+                                    }
+                                }
+                                if (!someoneIsWorking) {
+                                    // Make sure again that none of the threads
+                                    // are
+                                    // alive.
+                                    logger.info("It looks like no thread is working, waiting for 10 seconds to make sure...");
+                                    sleep(10);
 
-										logger.info("Waiting for 10 seconds before final clean up...");
-										sleep(10);
+                                    someoneIsWorking = false;
+                                    for (int i = 0; i < threads.size(); i++) {
+                                        Thread thread = threads.get(i);
+                                        if (thread.isAlive() && crawlers.get(i).isNotWaitingForNewURLs()) {
+                                            someoneIsWorking = true;
+                                        }
+                                    }
+                                    if (!someoneIsWorking) {
+                                        if (!shuttingDown) {
+                                            long queueLength = frontier.getQueueLength();
+                                            if (queueLength > 0) {
+                                                continue;
+                                            }
+                                            logger.info("No thread is working and no more URLs are in queue waiting for another 10 seconds to make sure...");
+                                            sleep(10);
+                                            queueLength = frontier.getQueueLength();
+                                            if (queueLength > 0) {
+                                                continue;
+                                            }
+                                        }
 
-										frontier.close();
-										docIdServer.close();
-										pageFetcher.shutDown();
+                                        logger.info("All of the crawlers are stopped. Finishing the process...");
+                                        // At this step, frontier notifies the
+                                        // threads that were
+                                        // waiting for new URLs and they should
+                                        // stop
+                                        frontier.finish();
+                                        for (T crawler : crawlers) {
+                                            crawler.onBeforeExit();
+                                            crawlersLocalData.add(crawler.getMyLocalData());
+                                        }
 
-										finished = true;
-										waitingLock.notifyAll();
+                                        logger.info("Waiting for 10 seconds before final clean up...");
+                                        sleep(10);
 
-										return;
-									}
-								}
-							}
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+                                        frontier.close();
+                                        docIdServer.close();
+                                        pageFetcher.shutDown();
+                                        if (crawlerTraps != null) {
+                                            crawlerTraps.close();
+                                        }
 
-			monitorThread.start();
+                                        finished = true;
+                                        waitingLock.notifyAll();
 
-			if (isBlocking) {
-				waitUntilFinish();
-			}
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+            monitorThread.start();
 
-	/**
-	 * Wait until this crawling session finishes.
-	 */
-	public void waitUntilFinish() {
-		while (!finished) {
-			synchronized (waitingLock) {
-				if (finished) {
-					return;
-				}
-				try {
-					waitingLock.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
+            if (isBlocking) {
+                waitUntilFinish();
+            }
 
-	/**
-	 * Once the crawling session finishes the controller collects the local data
-	 * of the crawler threads and stores them in a List. This function returns
-	 * the reference to this list.
-	 */
-	public List<Object> getCrawlersLocalData() {
-		return crawlersLocalData;
-	}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-	protected void sleep(int seconds) {
-		try {
-			Thread.sleep(seconds * 1000);
-		} catch (Exception ignored) {
-		}
-	}
+    /**
+     * Wait until this crawling session finishes.
+     */
+    public void waitUntilFinish() {
+        while (!finished) {
+            synchronized (waitingLock) {
+                if (finished) {
+                    return;
+                }
+                try {
+                    waitingLock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
-	/**
-	 * Adds a new seed URL. A seed URL is a URL that is fetched by the crawler
-	 * to extract new URLs in it and follow them for crawling.
-	 * 
-	 * @param pageUrl
-	 *            the URL of the seed
-	 */
-	public void addSeed(String pageUrl) {
-		addSeed(pageUrl, -1);
-	}
+    /**
+     * Once the crawling session finishes the controller collects the local data
+     * of the crawler threads and stores them in a List. This function returns
+     * the reference to this list.
+     */
+    public List<Object> getCrawlersLocalData() {
+        return crawlersLocalData;
+    }
 
-	/**
-	 * Adds a new seed URL. A seed URL is a URL that is fetched by the crawler
-	 * to extract new URLs in it and follow them for crawling. You can also
-	 * specify a specific document id to be assigned to this seed URL. This
-	 * document id needs to be unique. Also, note that if you add three seeds
-	 * with document ids 1,2, and 7. Then the next URL that is found during the
-	 * crawl will get a doc id of 8. Also you need to ensure to add seeds in
-	 * increasing order of document ids.
-	 * 
-	 * Specifying doc ids is mainly useful when you have had a previous crawl
-	 * and have stored the results and want to start a new crawl with seeds
-	 * which get the same document ids as the previous crawl.
-	 * 
-	 * @param pageUrl
-	 *            the URL of the seed
-	 * @param docId
-	 *            the document id that you want to be assigned to this seed URL.
-	 * 
-	 */
-	public void addSeed(String pageUrl, int docId) {
-		String canonicalUrl = URLCanonicalizer.getCanonicalURL(pageUrl);
-		if (canonicalUrl == null) {
-			logger.error("Invalid seed URL: " + pageUrl);
-			return;
-		}
-		if (docId < 0) {
-			docId = docIdServer.getDocId(canonicalUrl);
-			if (docId > 0) {
-				// This URL is already seen.
-				return;
-			}
-			docId = docIdServer.getNewDocID(canonicalUrl);
-		} else {
-			try {
-				docIdServer.addUrlAndDocId(canonicalUrl, docId);
-			} catch (Exception e) {
-				logger.error("Could not add seed: " + e.getMessage());
-			}
-		}
+    protected void sleep(int seconds) {
+        try {
+            Thread.sleep(seconds * 1000);
+        } catch (Exception ignored) {
+        }
+    }
 
-		WebURL webUrl = new WebURL();
-		webUrl.setURL(canonicalUrl);
-		webUrl.setDocid(docId);
-		webUrl.setDepth((short) 0);
-		if (!robotstxtServer.allows(webUrl)) {
-			logger.info("Robots.txt does not allow this seed: " + pageUrl);
-		} else {
-			frontier.schedule(webUrl);
-		}
-	}
+    /**
+     * Adds a new seed URL. A seed URL is a URL that is fetched by the crawler
+     * to extract new URLs in it and follow them for crawling.
+     *
+     * @param pageUrl
+     *            the URL of the seed
+     */
+    public void addSeed(String pageUrl) {
+        addSeed(pageUrl, -1);
+    }
 
-	/**
-	 * This function can called to assign a specific document id to a url. This
-	 * feature is useful when you have had a previous crawl and have stored the
-	 * Urls and their associated document ids and want to have a new crawl which
-	 * is aware of the previously seen Urls and won't re-crawl them.
-	 * 
-	 * Note that if you add three seen Urls with document ids 1,2, and 7. Then
-	 * the next URL that is found during the crawl will get a doc id of 8. Also
-	 * you need to ensure to add seen Urls in increasing order of document ids. 
-	 * 
-	 * @param pageUrl
-	 *            the URL of the page
-	 * @param docId
-	 *            the document id that you want to be assigned to this URL.
-	 * 
-	 */
-	public void addSeenUrl(String url, int docId) {
-		String canonicalUrl = URLCanonicalizer.getCanonicalURL(url);
-		if (canonicalUrl == null) {
-			logger.error("Invalid Url: " + url);
-			return;
-		}
-		try {
-			docIdServer.addUrlAndDocId(canonicalUrl, docId);
-		} catch (Exception e) {
-			logger.error("Could not add seen url: " + e.getMessage());
-		}
-	}
+    /**
+     * Adds a new seed URL. A seed URL is a URL that is fetched by the crawler
+     * to extract new URLs in it and follow them for crawling. You can also
+     * specify a specific document id to be assigned to this seed URL. This
+     * document id needs to be unique. Also, note that if you add three seeds
+     * with document ids 1,2, and 7. Then the next URL that is found during the
+     * crawl will get a doc id of 8. Also you need to ensure to add seeds in
+     * increasing order of document ids.
+     *
+     * Specifying doc ids is mainly useful when you have had a previous crawl
+     * and have stored the results and want to start a new crawl with seeds
+     * which get the same document ids as the previous crawl.
+     *
+     * @param pageUrl
+     *            the URL of the seed
+     * @param docId
+     *            the document id that you want to be assigned to this seed URL.
+     *
+     */
+    public void addSeed(String pageUrl, int docId) {
+        String canonicalUrl = URLCanonicalizer.getCanonicalURL(pageUrl);
+        if (canonicalUrl == null) {
+            logger.error("Invalid seed URL: " + pageUrl);
+            return;
+        }
+        if (docId < 0) {
+            docId = docIdServer.getDocId(canonicalUrl);
+            if (docId > 0) {
+                // This URL is already seen.
+                return;
+            }
+            docId = docIdServer.getNewDocID(canonicalUrl);
+        } else {
+            try {
+                docIdServer.addUrlAndDocId(canonicalUrl, docId);
+            } catch (Exception e) {
+                logger.error("Could not add seed: " + e.getMessage());
+            }
+        }
 
-	public PageFetcher getPageFetcher() {
-		return pageFetcher;
-	}
+        WebURL webUrl = new WebURL();
+        webUrl.setURL(canonicalUrl);
+        webUrl.setDocid(docId);
+        webUrl.setDepth((short) 0);
+        if (!robotstxtServer.allows(webUrl)) {
+            logger.info("Robots.txt does not allow this seed: " + pageUrl);
+        } else {
+            frontier.schedule(webUrl);
+        }
+    }
 
-	public void setPageFetcher(PageFetcher pageFetcher) {
-		this.pageFetcher = pageFetcher;
-	}
+    /**
+     * This function can called to assign a specific document id to a url. This
+     * feature is useful when you have had a previous crawl and have stored the
+     * Urls and their associated document ids and want to have a new crawl which
+     * is aware of the previously seen Urls and won't re-crawl them.
+     *
+     * Note that if you add three seen Urls with document ids 1,2, and 7. Then
+     * the next URL that is found during the crawl will get a doc id of 8. Also
+     * you need to ensure to add seen Urls in increasing order of document ids.
+     *
+     * @param pageUrl
+     *            the URL of the page
+     * @param docId
+     *            the document id that you want to be assigned to this URL.
+     *
+     */
+    public void addSeenUrl(String url, int docId) {
+        String canonicalUrl = URLCanonicalizer.getCanonicalURL(url);
+        if (canonicalUrl == null) {
+            logger.error("Invalid Url: " + url);
+            return;
+        }
+        try {
+            docIdServer.addUrlAndDocId(canonicalUrl, docId);
+        } catch (Exception e) {
+            logger.error("Could not add seen url: " + e.getMessage());
+        }
+    }
 
-	public RobotstxtServer getRobotstxtServer() {
-		return robotstxtServer;
-	}
+    public PageFetcher getPageFetcher() {
+        return pageFetcher;
+    }
 
-	public void setRobotstxtServer(RobotstxtServer robotstxtServer) {
-		this.robotstxtServer = robotstxtServer;
-	}
+    public void setPageFetcher(PageFetcher pageFetcher) {
+        this.pageFetcher = pageFetcher;
+    }
 
-	public Frontier getFrontier() {
-		return frontier;
-	}
+    public RobotstxtServer getRobotstxtServer() {
+        return robotstxtServer;
+    }
 
-	public void setFrontier(Frontier frontier) {
-		this.frontier = frontier;
-	}
+    public void setRobotstxtServer(RobotstxtServer robotstxtServer) {
+        this.robotstxtServer = robotstxtServer;
+    }
 
-	public DocIDServer getDocIdServer() {
-		return docIdServer;
-	}
+    public Frontier getFrontier() {
+        return frontier;
+    }
 
-	public void setDocIdServer(DocIDServer docIdServer) {
-		this.docIdServer = docIdServer;
-	}
+    public void setFrontier(Frontier frontier) {
+        this.frontier = frontier;
+    }
 
-	public Object getCustomData() {
-		return customData;
-	}
+    public DocIDServer getDocIdServer() {
+        return docIdServer;
+    }
 
-	public void setCustomData(Object customData) {
-		this.customData = customData;
-	}
+    public void setDocIdServer(DocIDServer docIdServer) {
+        this.docIdServer = docIdServer;
+    }
 
-	public boolean isFinished() {
-		return this.finished;
-	}
+    public Object getCustomData() {
+        return customData;
+    }
 
-	public boolean isShuttingDown() {
-		return shuttingDown;
-	}
+    public void setCustomData(Object customData) {
+        this.customData = customData;
+    }
 
-	/**
-	 * Set the current crawling session set to 'shutdown'. Crawler threads
-	 * monitor the shutdown flag and when it is set to true, they will no longer
-	 * process new pages.
-	 */
-	public void Shutdown() {
-		logger.info("Shutting down...");
-		this.shuttingDown = true;
-		frontier.finish();
-	}
+    public boolean isFinished() {
+        return this.finished;
+    }
+
+    public boolean isShuttingDown() {
+        return shuttingDown;
+    }
+
+    /**
+     * Tests if the given URL is a crawler trap.
+     * @param uri the URL to test
+     * @return whether the given URL is a crawler trap.
+     */
+    public boolean isCrawlerTrap(WebURL wurl) {
+        return isCrawlerTrap(wurl.getURL());
+    }
+
+    /**
+     * Tests if the given URL is a crawler trap.
+     * @param uri the URL to test
+     * @return whether the given URL is a crawler trap.
+     */
+    public boolean isCrawlerTrap(String url) {
+        if (crawlerTraps == null) {
+            return false;
+        }
+        return crawlerTraps.isCrawlerTrap(url);
+    }
+
+    /**
+     * Set the current crawling session set to 'shutdown'. Crawler threads
+     * monitor the shutdown flag and when it is set to true, they will no longer
+     * process new pages.
+     */
+    public void Shutdown() {
+        logger.info("Shutting down...");
+        this.shuttingDown = true;
+        frontier.finish();
+    }
 }

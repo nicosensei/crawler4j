@@ -25,15 +25,7 @@ import com.sleepycat.persist.model.SecondaryKey;
 
 /**
  * A crawler trap specifies an URI pattern that the crawler should not process, as a
- * regular expression.
- *
- * Two types of crawler traps are defined:
- * <ul>
- * <li>global crawler traps are generic are applied to all crawls</li>
- * <li>specific crawler traps are are applied to a specific crawl implementation</li>
- * </ul>
- *
- * Traps are grouped in lists, which are identified by a unique name.
+ * regular expression. Traps are grouped in lists, which are identified by a unique name.
  *
  * @author ngiraud
  *
@@ -42,49 +34,57 @@ import com.sleepycat.persist.model.SecondaryKey;
 public class CrawlerTrap implements Comparable<CrawlerTrap> {
 
     /**
-     * The available types of crawler traps.
-     */
-    public enum Type {
-        GLOBAL,
-        SPECIFIC
-    }
-
-    /**
-     * The trap type.
-     */
-    @SecondaryKey(relate=Relationship.MANY_TO_ONE)
-    private final Type type;
-
-    /**
      * The regular expression.
      */
     @PrimaryKey
-    private final String pattern;
+    private String pattern;
 
     /**
      * The name of the parent list.
      */
     @SecondaryKey(relate=Relationship.MANY_TO_ONE)
-    private final String trapListName;
+    private String trapListName;
 
+    /**
+     * Default empty constructor (required for an {@link Entity})
+     */
+    public CrawlerTrap() {
+
+    }
+
+    /**
+     * Constructor.
+     * @param trapListName the list name
+     * @param pattern the regulmar expression
+     */
     public CrawlerTrap(
-            final Type type,
             final String trapListName,
             final String pattern) {
-        this.type = type;
         this.trapListName = trapListName;
         this.pattern = pattern;
     }
 
+    /**
+     * Tests an URI against the regexp.
+     * @param uri the string to test
+     * @return true if the expression is matched, false otherwise.
+     */
     public boolean matches(String uri) {
         return Pattern.matches(pattern, uri);
     }
 
     /**
-     * @return the fr.nikokode.c4jaddons.example.thumbpost
+     * @return the pattern
      */
     public String getPattern() {
         return pattern;
+    }
+
+    /**
+     * @param pattern the pattern to set
+     */
+    public void setPattern(String pattern) {
+        this.pattern = pattern;
     }
 
     /**
@@ -95,10 +95,10 @@ public class CrawlerTrap implements Comparable<CrawlerTrap> {
     }
 
     /**
-     * @return the type
+     * @param trapListName the trapListName to set
      */
-    public Type getType() {
-        return type;
+    public void setTrapListName(String trapListName) {
+        this.trapListName = trapListName;
     }
 
     @Override
