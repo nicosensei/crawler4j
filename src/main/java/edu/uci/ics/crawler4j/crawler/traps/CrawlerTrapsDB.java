@@ -22,6 +22,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.persist.EntityCursor;
@@ -29,10 +31,8 @@ import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
 import com.sleepycat.persist.StoreConfig;
 
-import edu.uci.ics.crawler4j.url.WebURL;
 import fr.nikokode.commons.bdb.AbstractBDB;
 import fr.nikokode.commons.exceptions.Unexpected;
-import fr.nikokode.commons.log.Log4jLogger;
 
 /**
  * Stores crawler traps in a BDB, and offers access methods.
@@ -41,6 +41,11 @@ import fr.nikokode.commons.log.Log4jLogger;
  *
  */
 public class CrawlerTrapsDB extends AbstractBDB {
+
+    /**
+     * The class logger
+     */
+    private static final Logger LOGGER = Logger.getLogger(CrawlerTrapsDB.class);
 
     /**
      * Default cache percentage.
@@ -95,7 +100,7 @@ public class CrawlerTrapsDB extends AbstractBDB {
             try {
                 trapStore.close();
             } catch (final DatabaseException e) {
-                Log4jLogger.error(this, e);
+                LOGGER.error(e);
             }
         }
     }
@@ -113,10 +118,10 @@ public class CrawlerTrapsDB extends AbstractBDB {
 
             trapsByPattern = trapStore.getPrimaryIndex(String.class, CrawlerTrap.class);
 
-            Log4jLogger.info(this,
-                    "Initialized crawler traps store (allowCreate=" + allowCreate + ").");
+            LOGGER.info("Initialized crawler traps store (allowCreate="
+                    + allowCreate + ").");
         } catch (final DatabaseException e) {
-            Log4jLogger.error(this, e);
+            LOGGER.error(e);
             throw new Unexpected(e); // TODO proper exception handling
         }
 

@@ -17,6 +17,13 @@
 
 package edu.uci.ics.crawler4j.crawler;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.log4j.Logger;
+
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 
@@ -28,14 +35,6 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 import edu.uci.ics.crawler4j.url.URLCanonicalizer;
 import edu.uci.ics.crawler4j.url.WebURL;
 import edu.uci.ics.crawler4j.util.IO;
-import fr.nikokode.commons.log.Log4jLogger;
-
-import org.apache.log4j.Logger;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 /**
  * The controller that manages a crawling session. This class creates the
@@ -133,7 +132,7 @@ public class CrawlController extends Configurable {
             crawlerTraps = new CrawlerTrapsDB(folder + File.separator + "traps");
             for (String path : trapFiles) {
                 crawlerTraps.addCrawlerTrapsFromFile(path);
-                Log4jLogger.info(this, "Loaded crawler traps from " + path);
+                logger.info("Loaded crawler traps from " + path);
             }
         }
     }
