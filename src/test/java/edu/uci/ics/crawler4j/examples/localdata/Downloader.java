@@ -20,12 +20,15 @@ package edu.uci.ics.crawler4j.examples.localdata;
 import org.apache.http.HttpStatus;
 
 import edu.uci.ics.crawler4j.crawler.CrawlConfig;
+import edu.uci.ics.crawler4j.crawler.CrawlController;
 import edu.uci.ics.crawler4j.crawler.Page;
 import edu.uci.ics.crawler4j.fetcher.PageFetchResult;
 import edu.uci.ics.crawler4j.fetcher.PageFetcher;
 import edu.uci.ics.crawler4j.parser.HtmlParseData;
 import edu.uci.ics.crawler4j.parser.ParseData;
-import edu.uci.ics.crawler4j.parser.Parser;
+import edu.uci.ics.crawler4j.parser.DefaultParser;
+import edu.uci.ics.crawler4j.robotstxt.RobotstxtConfig;
+import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 import edu.uci.ics.crawler4j.url.WebURL;
 
 /**
@@ -34,13 +37,21 @@ import edu.uci.ics.crawler4j.url.WebURL;
  */
 public class Downloader {
 
-	private Parser parser;
+	private DefaultParser defaultParser;
 	private PageFetcher pageFetcher;
 
-	public Downloader() {
+	public Downloader() throws Exception {
 		CrawlConfig config = new CrawlConfig();
-		parser = new Parser(config);
 		pageFetcher = new PageFetcher(config);
+		
+		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
+        robotstxtConfig.setUserAgentName(config.getUserAgentString());
+        robotstxtConfig.setEnabled(true);	        
+        RobotstxtServer robotstxtServer =
+                new RobotstxtServer(robotstxtConfig, pageFetcher);
+		
+		CrawlController ctrl = new CrawlController(config, pageFetcher, robotstxtServer);
+		defaultParser = new DefaultParser(ctrl);		
 	}
 
 	private Page download(String url) {
@@ -53,7 +64,7 @@ public class Downloader {
 				try {
 					Page page = new Page(curURL);
 					fetchResult.fetchContent(page);
-					if (parser.parse(page, curURL.getURL())) {
+					if (defaultParser.parse(page, curURL.getURL())) {
 						return page;
 					}
 				} catch (Exception e) {
@@ -87,7 +98,7 @@ public class Downloader {
 		System.out.println("==============");
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		Downloader downloader = new Downloader();
 		downloader.processUrl("http://en.wikipedia.org/wiki/Main_Page/");
 		downloader.processUrl("http://www.yahoo.com/");

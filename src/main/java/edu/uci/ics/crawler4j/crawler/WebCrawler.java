@@ -28,6 +28,7 @@ import edu.uci.ics.crawler4j.fetcher.PageFetchResult;
 import edu.uci.ics.crawler4j.fetcher.PageFetcher;
 import edu.uci.ics.crawler4j.frontier.DocIDServer;
 import edu.uci.ics.crawler4j.frontier.Frontier;
+import edu.uci.ics.crawler4j.parser.DefaultParser;
 import edu.uci.ics.crawler4j.parser.HtmlParseData;
 import edu.uci.ics.crawler4j.parser.ParseData;
 import edu.uci.ics.crawler4j.parser.Parser;
@@ -113,9 +114,20 @@ public class WebCrawler implements Runnable {
         this.robotstxtServer = crawlController.getRobotstxtServer();
         this.docIdServer = crawlController.getDocIdServer();
         this.frontier = crawlController.getFrontier();
-        this.parser = new Parser(crawlController.getConfig());
+        this.parser = parserFactory(crawlController);
         this.myController = crawlController;
         this.isWaitingForNewURLs = false;
+    }
+    
+    /**
+     * Factory method that instantiates the parser. This default implementation
+     * returns a new {@link DefaultParser}. Subclasses who would define another parser
+     * implementation should override this method.
+     * @param cfg the {@link CrawlConfig}
+     * @return an instance of {@link Parser}
+     */
+    protected Parser parserFactory(CrawlController crawlController) {
+    	return new DefaultParser(crawlController);
     }
 
     /**
