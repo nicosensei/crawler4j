@@ -85,12 +85,12 @@ public class CrawlerTrapsDB extends AbstractBDB {
     }
 
     @Override
-    protected String getStorageFolderPath() {
+    public String getStorageFolderPath() {
         return storageFolderPath;
     }
 
     @Override
-    protected int getCachePercentage() {
+    public int getCachePercentage() {
         return DEFAULT_CACHE_PERCENTAGE;
     }
 
