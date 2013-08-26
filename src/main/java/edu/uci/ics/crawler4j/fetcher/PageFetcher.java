@@ -196,7 +196,9 @@ public class PageFetcher extends Configurable {
 						size = -1;
 					}
 				}
-				if (size > config.getMaxDownloadSize()) {
+				
+				int maxDownSize = config.getMaxDownloadSize();
+				if (maxDownSize > 0 && size > maxDownSize) {
 					fetchResult.setStatusCode(CustomFetchStatus.PageTooBig);
 					return fetchResult;
 				}

@@ -97,7 +97,7 @@ public class CrawlConfig {
 
     /**
      * Max allowed size of a page. Pages larger than this size will not be
-     * fetched.
+     * fetched. -1 stands for unlimited, use with caution!
      */
     private int maxDownloadSize = 1048576;
 
