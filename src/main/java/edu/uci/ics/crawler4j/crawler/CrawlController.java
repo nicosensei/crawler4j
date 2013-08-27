@@ -177,9 +177,9 @@ public class CrawlController extends Configurable {
                 crawler.init(i, this);
                 thread.start();
                 crawlers.add(crawler);
-                threads.add(thread);
-                logger.info("Crawler " + i + " started.");
+                threads.add(thread);                
             }
+            logger.info("Started " + numberOfCrawlers + " crawlers.");
 
             final CrawlController controller = this;
 
