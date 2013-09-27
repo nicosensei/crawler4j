@@ -211,7 +211,7 @@ public class PageFetcher extends Configurable {
 			}
 		} catch (IOException e) {
 			logger.error("Fatal transport error: " + e.getMessage() + " while fetching " + toFetchURL
-					+ " (link found in doc #" + webUrl.getParentDocid() + ")");
+					+ " (link found in doc #" + webUrl.getParentDocid() + ")", e);
 			fetchResult.setStatusCode(CustomFetchStatus.FatalTransportError);
 			return fetchResult;
 		} catch (IllegalStateException e) {
@@ -219,9 +219,9 @@ public class PageFetcher extends Configurable {
 			// and other schemes
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
-				logger.error("Error while fetching " + webUrl.getURL());
+				logger.error("Error while fetching " + webUrl.getURL(), e);
 			} else {
-				logger.error(e.getMessage() + " while fetching " + webUrl.getURL());
+				logger.error(e.getMessage() + " while fetching " + webUrl.getURL(), e);
 			}
 		} finally {
 			try {
