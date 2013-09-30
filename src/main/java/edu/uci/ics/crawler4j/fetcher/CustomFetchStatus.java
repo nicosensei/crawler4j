@@ -27,6 +27,7 @@ public class CustomFetchStatus {
 	public static final int PageTooBig = 1001;
 	public static final int FatalTransportError = 1005;
 	public static final int UnknownError = 1006;
+	public static final int InlineData = 1007;
 
 	public static String getStatusDescription(int code) {
 		switch (code) {
@@ -94,8 +95,10 @@ public class CustomFetchStatus {
 			return "Page size was too big";
 		case FatalTransportError:
 			return "Fatal transport error";
+		case InlineData:
+			return "Inline data URI";
 		case UnknownError:
-			return "Unknown error";
+			return "Unknown error";		
 		default:
 			return "(" + code + ")";
 		}

@@ -53,6 +53,7 @@ import org.apache.log4j.Logger;
 
 import edu.uci.ics.crawler4j.crawler.Configurable;
 import edu.uci.ics.crawler4j.crawler.CrawlConfig;
+import edu.uci.ics.crawler4j.crawler.InlineDataURIUtils;
 import edu.uci.ics.crawler4j.url.URLCanonicalizer;
 import edu.uci.ics.crawler4j.url.WebURL;
 
@@ -62,7 +63,7 @@ import edu.uci.ics.crawler4j.url.WebURL;
 public class PageFetcher extends Configurable {
 
 	protected static final Logger logger = Logger.getLogger(PageFetcher.class);
-
+	
 	protected ThreadSafeClientConnManager connectionManager;
 
 	protected DefaultHttpClient httpClient;
@@ -142,6 +143,14 @@ public class PageFetcher extends Configurable {
 	public PageFetchResult fetchHeader(WebURL webUrl) {
 		PageFetchResult fetchResult = new PageFetchResult();
 		String toFetchURL = webUrl.getURL();
+		
+		if (InlineDataURIUtils.isInlineDataUri(webUrl)) {
+			fetchResult.setFetchedUrl(toFetchURL);
+			fetchResult.setStatusCode(CustomFetchStatus.InlineData);
+			// TODO handle payload
+			return fetchResult;
+		}
+		
 		HttpGet get = null;
 		try {
 			get = new HttpGet(toFetchURL);
