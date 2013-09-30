@@ -81,6 +81,11 @@ public class CrawlController extends Configurable {
     protected CrawlerTrapsDB crawlerTraps;
 
     protected final Object waitingLock = new Object();
+    
+    /**
+     * @see CrawlConfig#getCrawlLoopWaitTime()
+     */
+    private final int crawlLoopWaitTime; 
 
     public CrawlController(
             CrawlConfig config,
@@ -135,6 +140,8 @@ public class CrawlController extends Configurable {
                 logger.info("Loaded crawler traps from " + path);
             }
         }
+        
+        this.crawlLoopWaitTime = config.getCrawlLoopWaitTime();
     }
 
     /**
@@ -182,7 +189,7 @@ public class CrawlController extends Configurable {
             logger.info("Started " + numberOfCrawlers + " crawlers.");
 
             final CrawlController controller = this;
-
+            
             Thread monitorThread = new Thread(new Runnable() {
 
                 @Override
@@ -191,7 +198,7 @@ public class CrawlController extends Configurable {
                         synchronized (waitingLock) {
 
                             while (true) {
-                                sleep(10);
+                                sleep(crawlLoopWaitTime);
                                 boolean someoneIsWorking = false;
                                 for (int i = 0; i < threads.size(); i++) {
                                     Thread thread = threads.get(i);
@@ -216,8 +223,9 @@ public class CrawlController extends Configurable {
                                     // Make sure again that none of the threads
                                     // are
                                     // alive.
-                                    logger.info("It looks like no thread is working, waiting for 10 seconds to make sure...");
-                                    sleep(10);
+                                    logger.info("It looks like no thread is working, waiting for "
+                                    		+ crawlLoopWaitTime + " seconds to make sure...");
+                                    sleep(crawlLoopWaitTime);
 
                                     someoneIsWorking = false;
                                     for (int i = 0; i < threads.size(); i++) {
@@ -232,8 +240,11 @@ public class CrawlController extends Configurable {
                                             if (queueLength > 0) {
                                                 continue;
                                             }
-                                            logger.info("No thread is working and no more URLs are in queue waiting for another 10 seconds to make sure...");
-                                            sleep(10);
+                                            logger.info("No thread is working and no more URLs are "
+                                            		+ "in queue waiting for another " 
+                                            		+ crawlLoopWaitTime
+                                            		+ " seconds to make sure...");
+                                            sleep(crawlLoopWaitTime);
                                             queueLength = frontier.getQueueLength();
                                             if (queueLength > 0) {
                                                 continue;
@@ -251,8 +262,10 @@ public class CrawlController extends Configurable {
                                             crawlersLocalData.add(crawler.getMyLocalData());
                                         }
 
-                                        logger.info("Waiting for 10 seconds before final clean up...");
-                                        sleep(10);
+                                        logger.info("Waiting for " 
+                                        		+ crawlLoopWaitTime  
+                                        		+ " seconds before final clean up...");
+                                        sleep(crawlLoopWaitTime);
 
                                         frontier.close();
                                         docIdServer.close();

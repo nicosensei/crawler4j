@@ -137,6 +137,12 @@ public class CrawlConfig {
      * These files should be plain text files with one regular expression per line.
      */
     private Set<String> crawlerTrapsFiles = new TreeSet<String>();
+    
+    /**
+     * The time to wait, in seconds, for any further activity once no active 
+     * crawling has been detected.
+     */
+    private int crawlLoopWaitTime = 10;
 
     public CrawlConfig() {
     }
@@ -407,7 +413,21 @@ public class CrawlConfig {
         this.crawlerTrapsFiles.add(absolutePath);
     }
 
-    @Override
+	/**
+	 * @return the crawlLoopWaitTime
+	 */
+	public final int getCrawlLoopWaitTime() {
+		return crawlLoopWaitTime;
+	}
+
+	/**
+	 * @param crawlLoopWaitTime the crawlLoopWaitTime to set
+	 */
+	public final void setCrawlLoopWaitTime(int crawlLoopWaitTime) {
+		this.crawlLoopWaitTime = crawlLoopWaitTime;
+	}
+
+	@Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Crawl storage folder: " + getCrawlStorageFolder() + "\n");
@@ -428,6 +448,7 @@ public class CrawlConfig {
         sb.append("Proxy port: " + getProxyPort() + "\n");
         sb.append("Proxy username: " + getProxyUsername() + "\n");
         sb.append("Proxy password: " + getProxyPassword() + "\n");
+        sb.append("End of crawl wait time (seconds): " + getEndOfCrawlWaitTime() + "\n");
         sb.append("Crawler traps files: ");
         for (String path : crawlerTrapsFiles) {
             sb.append("\n\t"+ path);
