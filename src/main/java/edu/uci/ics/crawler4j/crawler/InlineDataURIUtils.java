@@ -26,7 +26,11 @@ public class InlineDataURIUtils {
 	private static final String INLINE_REGEX = "data:(\\w+)/(\\w+);(\\w+),(.*)";
 	
 	public static final boolean isInlineDataUri(WebURL wurl) {
-		return Pattern.matches(INLINE_REGEX, wurl.getURL());
+		return isInlineDataUri(wurl.getURL());
+	}
+	
+	public static final boolean isInlineDataUri(String url) {
+		return Pattern.matches(INLINE_REGEX, url);
 	}
 	
 	public static final Map<Metadata, Object> extractMetadata(String url) {

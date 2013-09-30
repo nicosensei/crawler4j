@@ -22,6 +22,8 @@ import java.io.Serializable;
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 
+import edu.uci.ics.crawler4j.crawler.InlineDataURIUtils;
+
 /**
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
@@ -43,6 +45,8 @@ public class WebURL implements Serializable {
 	private String path;
 	private String anchor;
 	private byte priority;
+	
+	private boolean isInlineDataUri;
 
 	/**
 	 * Returns the unique document id assigned to this Url.
@@ -82,8 +86,18 @@ public class WebURL implements Serializable {
 	}
 
 	public void setURL(String url) {
+		
 		this.url = url;
+		
+		if (InlineDataURIUtils.isInlineDataUri(url)) {
+			domain = "";
+			subDomain = "";
+			path="";
+			isInlineDataUri = true;
+			return;
+		}
 
+		isInlineDataUri = false;
 		int domainStartIdx = url.indexOf("//") + 2;
 		int domainEndIdx = url.indexOf('/', domainStartIdx);
 		domain = url.substring(domainStartIdx, domainEndIdx);
