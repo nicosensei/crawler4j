@@ -448,7 +448,7 @@ public class CrawlConfig {
         sb.append("Proxy port: " + getProxyPort() + "\n");
         sb.append("Proxy username: " + getProxyUsername() + "\n");
         sb.append("Proxy password: " + getProxyPassword() + "\n");
-        sb.append("End of crawl wait time (seconds): " + getEndOfCrawlWaitTime() + "\n");
+        sb.append("End of crawl wait time (seconds): " + getCrawlLoopWaitTime() + "\n");
         sb.append("Crawler traps files: ");
         for (String path : crawlerTrapsFiles) {
             sb.append("\n\t"+ path);
