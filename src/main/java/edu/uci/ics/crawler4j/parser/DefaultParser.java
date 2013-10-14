@@ -42,7 +42,7 @@ public class DefaultParser extends Parser {
 	private ParseContext parseContext;
 
 	public DefaultParser(CrawlController<?> crawlController) {
-		super(crawlController);
+		super(crawlController.getConfig());
 		htmlParser = new HtmlParser();
 		parseContext = new ParseContext();
 	}
