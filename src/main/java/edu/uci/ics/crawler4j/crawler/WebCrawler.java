@@ -55,7 +55,7 @@ public class WebCrawler implements Runnable {
      * reference to the controller can be used for getting configurations of the
      * current crawl or adding new seeds during runtime.
      */
-    protected CrawlController myController;
+    protected CrawlController<?> myController;
 
     /**
      * The thread within which this crawler instance is running.
@@ -108,7 +108,7 @@ public class WebCrawler implements Runnable {
      * @param crawlController
      *            the controller that manages this crawling session
      */
-    public void init(int myId, CrawlController crawlController) {
+    public void init(int myId, CrawlController<?> crawlController) {
         this.myId = myId;
         this.pageFetcher = crawlController.getPageFetcher();
         this.robotstxtServer = crawlController.getRobotstxtServer();
@@ -126,7 +126,7 @@ public class WebCrawler implements Runnable {
      * @param cfg the {@link CrawlConfig}
      * @return an instance of {@link Parser}
      */
-    protected Parser parserFactory(CrawlController crawlController) {
+    protected Parser parserFactory(CrawlController<?> crawlController) {
     	return new DefaultParser(crawlController);
     }
 
@@ -139,7 +139,7 @@ public class WebCrawler implements Runnable {
         return myId;
     }
 
-    public CrawlController getMyController() {
+    public CrawlController<?> getMyController() {
         return myController;
     }
 

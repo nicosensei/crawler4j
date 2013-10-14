@@ -32,7 +32,19 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
  * crawler.include_images to true
  */
 
-public class ImageCrawlController {
+public class ImageCrawlController extends CrawlController<ImageCrawler> {
+
+	public ImageCrawlController(
+			CrawlConfig config, 
+			PageFetcher pageFetcher,
+			RobotstxtServer robotstxtServer) throws Exception {
+		super(config, pageFetcher, robotstxtServer);
+	}
+
+	@Override
+	public ImageCrawler webCrawlerFactory() {
+		return new ImageCrawler();
+	}
 
 	public static void main(String[] args) throws Exception {
 		if (args.length < 3) {
@@ -61,14 +73,14 @@ public class ImageCrawlController {
 		PageFetcher pageFetcher = new PageFetcher(config);
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
-		CrawlController controller = new CrawlController(config, pageFetcher, robotstxtServer);
+		ImageCrawlController controller = new ImageCrawlController(config, pageFetcher, robotstxtServer);
 		for (String domain : crawlDomains) {
 			controller.addSeed(domain);
 		}
 
 		ImageCrawler.configure(crawlDomains, storageFolder);
 
-		controller.start(ImageCrawler.class, numberOfCrawlers);
+		controller.start(numberOfCrawlers);
 	}
 
 }

@@ -17,8 +17,8 @@
 
 package edu.uci.ics.crawler4j.parser;
 
-import edu.uci.ics.crawler4j.crawler.Configurable;
 import edu.uci.ics.crawler4j.crawler.CrawlController;
+import edu.uci.ics.crawler4j.crawler.Configurable;
 import edu.uci.ics.crawler4j.crawler.Page;
 import edu.uci.ics.crawler4j.util.Util;
 
@@ -27,12 +27,12 @@ import edu.uci.ics.crawler4j.util.Util;
  */
 public abstract class Parser extends Configurable {
 
-	public Parser(CrawlController crawlController) {
+	public Parser(CrawlController<?> crawlController) {
 		super(crawlController.getConfig());
 		initHTMLParser(crawlController);
 	}
 	
-	protected abstract void initHTMLParser(CrawlController crawlController);
+	protected abstract void initHTMLParser(CrawlController<?> crawlController);
 	
 	protected abstract HtmlParseData parseHtml(Page page, String contextURL) throws Exception;
 

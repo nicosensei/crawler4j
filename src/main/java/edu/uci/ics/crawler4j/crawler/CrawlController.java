@@ -42,9 +42,10 @@ import edu.uci.ics.crawler4j.util.IO;
  *
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
-public class CrawlController extends Configurable {
+public abstract class CrawlController<T extends WebCrawler> extends Configurable {
 
-    private static final Logger logger = Logger.getLogger(CrawlController.class.getName());
+    private static final Logger logger = Logger.getLogger(
+    		CrawlController.class.getName());
 
     /**
      * The 'customData' object can be used for passing custom crawl-related
@@ -147,30 +148,31 @@ public class CrawlController extends Configurable {
     /**
      * Start the crawling session and wait for it to finish.
      *
-     * @param _c
-     *            the class that implements the logic for crawler threads
      * @param numberOfCrawlers
      *            the number of concurrent threads that will be contributing in
      *            this crawling session.
      */
-    public <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers) {
-        this.start(_c, numberOfCrawlers, true);
+    public void start(final int numberOfCrawlers) {
+        this.start(numberOfCrawlers, true);
     }
 
     /**
      * Start the crawling session and return immediately.
      *
-     * @param _c
-     *            the class that implements the logic for crawler threads
      * @param numberOfCrawlers
      *            the number of concurrent threads that will be contributing in
      *            this crawling session.
      */
-    public <T extends WebCrawler> void startNonBlocking(final Class<T> _c, final int numberOfCrawlers) {
-        this.start(_c, numberOfCrawlers, false);
+    public void startNonBlocking(final int numberOfCrawlers) {
+        this.start(numberOfCrawlers, false);
     }
+    
+    /**
+     * Override for specific initialization
+     */
+    public abstract T webCrawlerFactory();
 
-    protected <T extends WebCrawler> void start(final Class<T> _c, final int numberOfCrawlers, boolean isBlocking) {
+    protected void start(final int numberOfCrawlers, boolean isBlocking) {
         try {
             finished = false;
             crawlersLocalData.clear();
@@ -178,7 +180,7 @@ public class CrawlController extends Configurable {
             final List<T> crawlers = new ArrayList<T>();
 
             for (int i = 1; i <= numberOfCrawlers; i++) {
-                T crawler = _c.newInstance();
+                T crawler = webCrawlerFactory();
                 Thread thread = new Thread(crawler, "Crawler " + i);
                 crawler.setThread(thread);
                 crawler.init(i, this);
@@ -188,7 +190,7 @@ public class CrawlController extends Configurable {
             }
             logger.info("Started " + numberOfCrawlers + " crawlers.");
 
-            final CrawlController controller = this;
+            final CrawlController<T> controller = this;
             
             Thread monitorThread = new Thread(new Runnable() {
 
@@ -205,7 +207,7 @@ public class CrawlController extends Configurable {
                                     if (!thread.isAlive()) {
                                         if (!shuttingDown) {
                                             logger.info("Thread " + i + " was dead, I'll recreate it.");
-                                            T crawler = _c.newInstance();
+                                            T crawler = controller.webCrawlerFactory();
                                             thread = new Thread(crawler, "Crawler " + (i + 1));
                                             threads.remove(i);
                                             threads.add(i, thread);

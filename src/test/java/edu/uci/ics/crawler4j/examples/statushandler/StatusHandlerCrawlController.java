@@ -26,7 +26,20 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 /**
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
-public class StatusHandlerCrawlController {
+public class StatusHandlerCrawlController extends CrawlController<StatusHandlerCrawler> {
+
+	public StatusHandlerCrawlController(
+			CrawlConfig config,
+			PageFetcher pageFetcher, 
+			RobotstxtServer robotstxtServer)
+			throws Exception {
+		super(config, pageFetcher, robotstxtServer);
+	}
+
+	@Override
+	public StatusHandlerCrawler webCrawlerFactory() {
+		return new StatusHandlerCrawler();
+	}
 
 	public static void main(String[] args) throws Exception {
 		if (args.length != 2) {
@@ -94,7 +107,8 @@ public class StatusHandlerCrawlController {
 		PageFetcher pageFetcher = new PageFetcher(config);
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
-		CrawlController controller = new CrawlController(config, pageFetcher, robotstxtServer);
+		StatusHandlerCrawlController controller = new StatusHandlerCrawlController(
+				config, pageFetcher, robotstxtServer);
 
 		/*
 		 * For each crawl, you need to add some seed urls. These are the first
@@ -109,6 +123,6 @@ public class StatusHandlerCrawlController {
 		 * Start the crawl. This is a blocking operation, meaning that your code
 		 * will reach the line after this only when crawling is finished.
 		 */
-		controller.start(StatusHandlerCrawler.class, numberOfCrawlers);
+		controller.start(numberOfCrawlers);
 	}
 }

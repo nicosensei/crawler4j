@@ -25,7 +25,20 @@ import edu.uci.ics.crawler4j.fetcher.PageFetcher;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtConfig;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 
-public class LocalDataCollectorController {
+public class LocalDataCollectorController extends CrawlController<LocalDataCollectorCrawler> {
+
+	public LocalDataCollectorController(
+			CrawlConfig config,
+			PageFetcher pageFetcher, 
+			RobotstxtServer robotstxtServer)
+			throws Exception {
+		super(config, pageFetcher, robotstxtServer);
+	}
+
+	@Override
+	public LocalDataCollectorCrawler webCrawlerFactory() {
+		return new LocalDataCollectorCrawler();
+	}
 
 	public static void main(String[] args) throws Exception {
 		if (args.length != 2) {
@@ -45,10 +58,11 @@ public class LocalDataCollectorController {
 		PageFetcher pageFetcher = new PageFetcher(config);
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
-		CrawlController controller = new CrawlController(config, pageFetcher, robotstxtServer);
+		LocalDataCollectorController controller = new LocalDataCollectorController(
+				config, pageFetcher, robotstxtServer);
 
 		controller.addSeed("http://www.ics.uci.edu/");
-		controller.start(LocalDataCollectorCrawler.class, numberOfCrawlers);
+		controller.start(numberOfCrawlers);
 
 		List<Object> crawlersLocalData = controller.getCrawlersLocalData();
 		long totalLinks = 0;

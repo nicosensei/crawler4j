@@ -20,13 +20,12 @@ package edu.uci.ics.crawler4j.examples.localdata;
 import org.apache.http.HttpStatus;
 
 import edu.uci.ics.crawler4j.crawler.CrawlConfig;
-import edu.uci.ics.crawler4j.crawler.CrawlController;
 import edu.uci.ics.crawler4j.crawler.Page;
 import edu.uci.ics.crawler4j.fetcher.PageFetchResult;
 import edu.uci.ics.crawler4j.fetcher.PageFetcher;
+import edu.uci.ics.crawler4j.parser.DefaultParser;
 import edu.uci.ics.crawler4j.parser.HtmlParseData;
 import edu.uci.ics.crawler4j.parser.ParseData;
-import edu.uci.ics.crawler4j.parser.DefaultParser;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtConfig;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 import edu.uci.ics.crawler4j.url.WebURL;
@@ -50,7 +49,7 @@ public class Downloader {
         RobotstxtServer robotstxtServer =
                 new RobotstxtServer(robotstxtConfig, pageFetcher);
 		
-		CrawlController ctrl = new CrawlController(config, pageFetcher, robotstxtServer);
+		LocalDataCollectorController ctrl = new LocalDataCollectorController(config, pageFetcher, robotstxtServer);
 		defaultParser = new DefaultParser(ctrl);		
 	}
 

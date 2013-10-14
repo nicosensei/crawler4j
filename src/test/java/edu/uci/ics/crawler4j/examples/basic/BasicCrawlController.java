@@ -17,8 +17,8 @@
 
 package edu.uci.ics.crawler4j.examples.basic;
 
-import edu.uci.ics.crawler4j.crawler.CrawlConfig;
 import edu.uci.ics.crawler4j.crawler.CrawlController;
+import edu.uci.ics.crawler4j.crawler.CrawlConfig;
 import edu.uci.ics.crawler4j.fetcher.PageFetcher;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtConfig;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
@@ -26,7 +26,19 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
 /**
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
-public class BasicCrawlController {
+public class BasicCrawlController extends CrawlController<BasicCrawler> {
+
+	BasicCrawlController(
+			CrawlConfig config, 
+			PageFetcher pageFetcher,
+			RobotstxtServer robotstxtServer) throws Exception {
+		super(config, pageFetcher, robotstxtServer);
+	}
+
+	@Override
+	public BasicCrawler webCrawlerFactory() {
+		return new BasicCrawler();
+	}
 
 	public static void main(String[] args) throws Exception {
 		if (args.length != 2) {
@@ -94,7 +106,7 @@ public class BasicCrawlController {
 		PageFetcher pageFetcher = new PageFetcher(config);
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
-		CrawlController controller = new CrawlController(config, pageFetcher, robotstxtServer);
+		BasicCrawlController controller = new BasicCrawlController(config, pageFetcher, robotstxtServer);
 
 		/*
 		 * For each crawl, you need to add some seed urls. These are the first
@@ -110,6 +122,6 @@ public class BasicCrawlController {
 		 * Start the crawl. This is a blocking operation, meaning that your code
 		 * will reach the line after this only when crawling is finished.
 		 */
-		controller.start(BasicCrawler.class, numberOfCrawlers);
+		controller.start(numberOfCrawlers);
 	}
 }

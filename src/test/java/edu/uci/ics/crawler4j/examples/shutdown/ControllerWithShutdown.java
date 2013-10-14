@@ -27,7 +27,19 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
 
-public class ControllerWithShutdown {
+public class ControllerWithShutdown extends CrawlController<BasicCrawler> {
+
+	public ControllerWithShutdown(
+			CrawlConfig config, 
+			PageFetcher pageFetcher,
+			RobotstxtServer robotstxtServer) throws Exception {
+		super(config, pageFetcher, robotstxtServer);
+	}
+
+	@Override
+	public BasicCrawler webCrawlerFactory() {
+		return new BasicCrawler();
+	}
 
 	public static void main(String[] args) throws Exception {
 		if (args.length != 2) {
@@ -64,7 +76,8 @@ public class ControllerWithShutdown {
 		PageFetcher pageFetcher = new PageFetcher(config);
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher);
-		CrawlController controller = new CrawlController(config, pageFetcher, robotstxtServer);
+		ControllerWithShutdown controller = new ControllerWithShutdown(
+				config, pageFetcher, robotstxtServer);
 
 		/*
 		 * For each crawl, you need to add some seed urls. These are the first
@@ -79,7 +92,7 @@ public class ControllerWithShutdown {
 		 * Start the crawl. This is a blocking operation, meaning that your code
 		 * will reach the line after this only when crawling is finished.
 		 */
-		controller.startNonBlocking(BasicCrawler.class, numberOfCrawlers);
+		controller.startNonBlocking(numberOfCrawlers);
 
 		// Wait for 30 seconds
 		Thread.sleep(30 * 1000);

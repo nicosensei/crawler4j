@@ -27,7 +27,20 @@ import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
 
-public class MultipleCrawlerController {
+public class MultipleCrawlerController extends CrawlController<BasicCrawler> {
+
+	public MultipleCrawlerController(
+			CrawlConfig config,
+			PageFetcher pageFetcher, 
+			RobotstxtServer robotstxtServer)
+			throws Exception {
+		super(config, pageFetcher, robotstxtServer);
+	}
+
+	@Override
+	public BasicCrawler webCrawlerFactory() {
+		return new BasicCrawler();
+	}
 
 	public static void main(String[] args) throws Exception {
 		if (args.length != 1) {
@@ -70,8 +83,10 @@ public class MultipleCrawlerController {
 		RobotstxtConfig robotstxtConfig = new RobotstxtConfig();
 		RobotstxtServer robotstxtServer = new RobotstxtServer(robotstxtConfig, pageFetcher1);
 
-		CrawlController controller1 = new CrawlController(config1, pageFetcher1, robotstxtServer);
-		CrawlController controller2 = new CrawlController(config2, pageFetcher2, robotstxtServer);
+		MultipleCrawlerController controller1 = new MultipleCrawlerController(
+				config1, pageFetcher1, robotstxtServer);
+		MultipleCrawlerController controller2 = new MultipleCrawlerController(
+				config2, pageFetcher2, robotstxtServer);
 
 		String[] crawler1Domains = new String[] { "http://www.ics.uci.edu/", "http://www.cnn.com/" };
 		String[] crawler2Domains = new String[] { "http://en.wikipedia.org/" };
@@ -92,8 +107,8 @@ public class MultipleCrawlerController {
 		 * The first crawler will have 5 cuncurrent threads and the second
 		 * crawler will have 7 threads.
 		 */
-		controller1.startNonBlocking(BasicCrawler.class, 5);
-		controller2.startNonBlocking(BasicCrawler.class, 7);
+		controller1.startNonBlocking(5);
+		controller2.startNonBlocking(7);
 
 		controller1.waitUntilFinish();
 		System.out.println("Crawler 1 is finished.");
