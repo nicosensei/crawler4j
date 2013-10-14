@@ -28,7 +28,7 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.html.HtmlParser;
 
-import edu.uci.ics.crawler4j.crawler.CrawlController;
+import edu.uci.ics.crawler4j.crawler.CrawlConfig;
 import edu.uci.ics.crawler4j.crawler.Page;
 import edu.uci.ics.crawler4j.url.URLCanonicalizer;
 import edu.uci.ics.crawler4j.url.WebURL;
@@ -41,8 +41,8 @@ public class DefaultParser extends Parser {
 	private HtmlParser htmlParser;
 	private ParseContext parseContext;
 
-	public DefaultParser(CrawlController<?> crawlController) {
-		super(crawlController.getConfig());
+	public DefaultParser(CrawlConfig cfg) {
+		super(cfg);
 		htmlParser = new HtmlParser();
 		parseContext = new ParseContext();
 	}

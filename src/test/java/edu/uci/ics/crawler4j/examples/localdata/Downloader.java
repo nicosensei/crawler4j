@@ -50,7 +50,7 @@ public class Downloader {
                 new RobotstxtServer(robotstxtConfig, pageFetcher);
 		
 		LocalDataCollectorController ctrl = new LocalDataCollectorController(config, pageFetcher, robotstxtServer);
-		defaultParser = new DefaultParser(ctrl);		
+		defaultParser = new DefaultParser(ctrl.getConfig());		
 	}
 
 	private Page download(String url) {

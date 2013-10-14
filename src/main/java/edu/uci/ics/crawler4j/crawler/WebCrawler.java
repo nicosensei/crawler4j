@@ -114,7 +114,7 @@ public class WebCrawler implements Runnable {
         this.robotstxtServer = crawlController.getRobotstxtServer();
         this.docIdServer = crawlController.getDocIdServer();
         this.frontier = crawlController.getFrontier();
-        this.parser = parserFactory(crawlController);
+        this.parser = parserFactory(crawlController.getConfig());
         this.myController = crawlController;
         this.isWaitingForNewURLs = false;
     }
@@ -126,8 +126,8 @@ public class WebCrawler implements Runnable {
      * @param cfg the {@link CrawlConfig}
      * @return an instance of {@link Parser}
      */
-    protected Parser parserFactory(CrawlController<?> crawlController) {
-    	return new DefaultParser(crawlController);
+    protected Parser parserFactory(CrawlConfig cfg) {
+    	return new DefaultParser(cfg);
     }
 
     /**
