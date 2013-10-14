@@ -42,13 +42,9 @@ public class DefaultParser extends Parser {
 	private ParseContext parseContext;
 
 	public DefaultParser(CrawlController<?> crawlController) {
-		super(crawlController);		
-	}
-
-	@Override
-	protected void initHTMLParser(CrawlController<?> crawlController) {
+		super(crawlController);
 		htmlParser = new HtmlParser();
-		parseContext = new ParseContext();		
+		parseContext = new ParseContext();
 	}
 
 	@Override

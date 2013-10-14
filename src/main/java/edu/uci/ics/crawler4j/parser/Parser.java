@@ -29,10 +29,7 @@ public abstract class Parser extends Configurable {
 
 	public Parser(CrawlController<?> crawlController) {
 		super(crawlController.getConfig());
-		initHTMLParser(crawlController);
 	}
-	
-	protected abstract void initHTMLParser(CrawlController<?> crawlController);
 	
 	protected abstract HtmlParseData parseHtml(Page page, String contextURL) throws Exception;
 
