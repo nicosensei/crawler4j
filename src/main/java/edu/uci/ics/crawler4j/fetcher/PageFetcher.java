@@ -35,6 +35,8 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.params.ClientPNames;
+import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
@@ -42,7 +44,7 @@ import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.entity.HttpEntityWrapper;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.params.CoreProtocolPNames;
@@ -63,8 +65,8 @@ import edu.uci.ics.crawler4j.url.WebURL;
 public class PageFetcher extends Configurable {
 
 	protected static final Logger logger = Logger.getLogger(PageFetcher.class);
-	
-	protected ThreadSafeClientConnManager connectionManager;
+
+	protected PoolingClientConnectionManager connectionManager;
 
 	protected DefaultHttpClient httpClient;
 
@@ -83,6 +85,7 @@ public class PageFetcher extends Configurable {
 		paramsBean.setContentCharset("UTF-8");
 		paramsBean.setUseExpectContinue(false);
 
+		params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.BROWSER_COMPATIBILITY);
 		params.setParameter(CoreProtocolPNames.USER_AGENT, config.getUserAgentString());
 		params.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, config.getSocketTimeout());
 		params.setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, config.getConnectionTimeout());
@@ -96,7 +99,7 @@ public class PageFetcher extends Configurable {
 			schemeRegistry.register(new Scheme("https", 443, SSLSocketFactory.getSocketFactory()));
 		}
 
-		connectionManager = new ThreadSafeClientConnManager(schemeRegistry);
+		connectionManager = new PoolingClientConnectionManager(schemeRegistry);
 		connectionManager.setMaxTotal(config.getMaxTotalConnections());
 		connectionManager.setDefaultMaxPerRoute(config.getMaxConnectionsPerHost());
 		httpClient = new DefaultHttpClient(connectionManager, params);
@@ -111,27 +114,27 @@ public class PageFetcher extends Configurable {
 
 			HttpHost proxy = new HttpHost(config.getProxyHost(), config.getProxyPort());
 			httpClient.getParams().setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
-        }
+		}
 
-        httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
+		httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
 
-            @Override
-            public void process(final HttpResponse response, final HttpContext context) throws HttpException,
-                    IOException {
-                HttpEntity entity = response.getEntity();
-                Header contentEncoding = entity.getContentEncoding();
-                if (contentEncoding != null) {
-                    HeaderElement[] codecs = contentEncoding.getElements();
-                    for (HeaderElement codec : codecs) {
-                        if (codec.getName().equalsIgnoreCase("gzip")) {
-                            response.setEntity(new GzipDecompressingEntity(response.getEntity()));
-                            return;
-                        }
-                    }
-                }
-            }
+			@Override
+			public void process(final HttpResponse response, final HttpContext context) throws HttpException,
+			IOException {
+				HttpEntity entity = response.getEntity();
+				Header contentEncoding = entity.getContentEncoding();
+				if (contentEncoding != null) {
+					HeaderElement[] codecs = contentEncoding.getElements();
+					for (HeaderElement codec : codecs) {
+						if (codec.getName().equalsIgnoreCase("gzip")) {
+							response.setEntity(new GzipDecompressingEntity(response.getEntity()));
+							return;
+						}
+					}
+				}
+			}
 
-        });
+		});
 
 		if (connectionMonitorThread == null) {
 			connectionMonitorThread = new IdleConnectionMonitorThread(connectionManager);
@@ -143,14 +146,14 @@ public class PageFetcher extends Configurable {
 	public PageFetchResult fetchHeader(WebURL webUrl) {
 		PageFetchResult fetchResult = new PageFetchResult();
 		String toFetchURL = webUrl.getURL();
-		
+
 		if (InlineDataURIUtils.isInlineDataUri(webUrl)) {
 			fetchResult.setFetchedUrl(toFetchURL);
 			fetchResult.setStatusCode(CustomFetchStatus.InlineData);
 			// TODO handle payload
 			return fetchResult;
 		}
-		
+
 		HttpGet get = null;
 		try {
 			get = new HttpGet(toFetchURL);
@@ -164,6 +167,7 @@ public class PageFetcher extends Configurable {
 			get.addHeader("Accept-Encoding", "gzip");
 			HttpResponse response = httpClient.execute(get);
 			fetchResult.setEntity(response.getEntity());
+			fetchResult.setResponseHeaders(response.getAllHeaders());
 
 			int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode != HttpStatus.SC_OK) {
@@ -205,22 +209,22 @@ public class PageFetcher extends Configurable {
 						size = -1;
 					}
 				}
-				
-				int maxDownSize = config.getMaxDownloadSize();
-				if (maxDownSize > 0 && size > maxDownSize) {
+				if (size > config.getMaxDownloadSize()) {
 					fetchResult.setStatusCode(CustomFetchStatus.PageTooBig);
+					get.abort();
 					return fetchResult;
 				}
 
 				fetchResult.setStatusCode(HttpStatus.SC_OK);
 				return fetchResult;
 
-			} else {
-				get.abort();
 			}
+
+			get.abort();
+
 		} catch (IOException e) {
 			logger.error("Fatal transport error: " + e.getMessage() + " while fetching " + toFetchURL
-					+ " (link found in doc #" + webUrl.getParentDocid() + ")", e);
+					+ " (link found in doc #" + webUrl.getParentDocid() + ")");
 			fetchResult.setStatusCode(CustomFetchStatus.FatalTransportError);
 			return fetchResult;
 		} catch (IllegalStateException e) {
@@ -228,9 +232,9 @@ public class PageFetcher extends Configurable {
 			// and other schemes
 		} catch (Exception e) {
 			if (e.getMessage() == null) {
-				logger.error("Error while fetching " + webUrl.getURL(), e);
+				logger.error("Error while fetching " + webUrl.getURL());
 			} else {
-				logger.error(e.getMessage() + " while fetching " + webUrl.getURL(), e);
+				logger.error(e.getMessage() + " while fetching " + webUrl.getURL());
 			}
 		} finally {
 			try {
@@ -251,7 +255,7 @@ public class PageFetcher extends Configurable {
 			connectionMonitorThread.shutdown();
 		}
 	}
-	
+
 	public HttpClient getHttpClient() {
 		return httpClient;
 	}

@@ -39,7 +39,7 @@ public class RobotstxtServer {
 
 	protected RobotstxtConfig config;
 
-	protected final Map<String, HostDirectives> host2directivesCache = new HashMap<String, HostDirectives>();
+	protected final Map<String, HostDirectives> host2directivesCache = new HashMap<>();
 
 	protected PageFetcher pageFetcher;
 
@@ -48,31 +48,35 @@ public class RobotstxtServer {
 		this.pageFetcher = pageFetcher;
 	}
 
+	private static String getHost(URL url) {
+		return url.getHost().toLowerCase();
+	}
+
 	public boolean allows(WebURL webURL) {
 		if (!config.isEnabled()) {
 			return true;
 		}
-		
+
 		if (InlineDataURIUtils.isInlineDataUri(webURL)) {
 			return true;
 		}
-		
+
 		try {
 			URL url = new URL(webURL.getURL());
-			String host = url.getHost().toLowerCase();
+			String host = getHost(url);
 			String path = url.getPath();
 
 			HostDirectives directives = host2directivesCache.get(host);
 
-            if (directives != null && directives.needsRefetch()) {
-                synchronized (host2directivesCache) {
-                    host2directivesCache.remove(host);
-                    directives = null;
-                }
-            }
+			if (directives != null && directives.needsRefetch()) {
+				synchronized (host2directivesCache) {
+					host2directivesCache.remove(host);
+					directives = null;
+				}
+			}
 
 			if (directives == null) {
-				directives = fetchDirectives(host);
+				directives = fetchDirectives(url);
 			}
 			return directives.allows(path);
 		} catch (MalformedURLException e) {
@@ -81,9 +85,11 @@ public class RobotstxtServer {
 		return true;
 	}
 
-	private HostDirectives fetchDirectives(String host) {
+	private HostDirectives fetchDirectives(URL url) {
 		WebURL robotsTxtUrl = new WebURL();
-		robotsTxtUrl.setURL("http://" + host + "/robots.txt");
+		String host = getHost(url);
+		String port = (url.getPort() == url.getDefaultPort() || url.getPort() == -1) ? "" : ":" + url.getPort();
+		robotsTxtUrl.setURL("http://" + host + port + "/robots.txt");
 		HostDirectives directives = null;
 		PageFetchResult fetchResult = null;
 		try {
@@ -106,7 +112,9 @@ public class RobotstxtServer {
 				}
 			}
 		} finally {
-			fetchResult.discardContentIfNotConsumed();
+			if (fetchResult != null) {
+				fetchResult.discardContentIfNotConsumed();
+			}
 		}
 		if (directives == null) {
 			// We still need to have this object to keep track of the time we
@@ -129,5 +137,4 @@ public class RobotstxtServer {
 		}
 		return directives;
 	}
-
 }

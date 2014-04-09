@@ -95,10 +95,10 @@ public class CustomFetchStatus {
 			return "Page size was too big";
 		case FatalTransportError:
 			return "Fatal transport error";
+		case UnknownError:
+			return "Unknown error";
 		case InlineData:
 			return "Inline data URI";
-		case UnknownError:
-			return "Unknown error";		
 		default:
 			return "(" + code + ")";
 		}

@@ -5,7 +5,7 @@
 	<artifactId>crawler4j</artifactId>
 	<packaging>jar</packaging>
 	<name>crawler4j</name>
-	<version>3.4.0-SNAPSHOT</version>
+	<version>3.6.0-SNAPSHOT</version>
 	<description>Open Source Web Crawler for Java</description>
 	<url>http://code.google.com/p/crawler4j/</url>
 	<licenses>
@@ -32,7 +32,7 @@
 	</developers>
 
 	<properties>
-		<commons-version>1.5.1</commons-version>
+		<commons-version>1.5.3</commons-version>
 	</properties>
 
 	<parent>
@@ -62,6 +62,34 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<!-- generate a source jar -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.2.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- generate a javadoc jar -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.9</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
@@ -87,13 +115,7 @@
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpclient</artifactId>
-			<version>4.1.2</version>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.httpcomponents</groupId>
-			<artifactId>httpcore</artifactId>
-			<version>4.1.4</version>
+			<version>4.2.3</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -159,14 +181,14 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>fr.nikokode</groupId>
+			<groupId>com.github.nicosensei</groupId>
 			<artifactId>commons-util</artifactId>
 			<version>${commons-version}</version>
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-            <groupId>fr.nikokode</groupId>
+            <groupId>com.github.nicosensei</groupId>
             <artifactId>commons-bdb</artifactId>
             <version>${commons-version}</version>
             <type>jar</type>

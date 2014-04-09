@@ -45,7 +45,7 @@ public class WebURL implements Serializable {
 	private String path;
 	private String anchor;
 	private byte priority;
-	
+
 	private boolean isInlineDataUri;
 
 	/**
@@ -57,6 +57,15 @@ public class WebURL implements Serializable {
 
 	public void setDocid(int docid) {
 		this.docid = docid;
+	}
+
+	@Override
+	public int hashCode() {
+		return url.hashCode();
+	}
+
+	public boolean isInlineDataUri() {
+		return isInlineDataUri;
 	}
 
 	@Override
@@ -86,9 +95,7 @@ public class WebURL implements Serializable {
 	}
 
 	public void setURL(String url) {
-		
 		this.url = url;
-		
 		if (InlineDataURIUtils.isInlineDataUri(url)) {
 			domain = "";
 			subDomain = "";
@@ -106,7 +113,7 @@ public class WebURL implements Serializable {
 		if (parts.length > 2) {
 			domain = parts[parts.length - 2] + "." + parts[parts.length - 1];
 			int limit = 2;
-			if (TLDList.contains(domain)) {
+			if (TLDList.getInstance().contains(domain)) {
 				domain = parts[parts.length - 3] + "." + domain;
 				limit = 3;
 			}
@@ -192,13 +199,13 @@ public class WebURL implements Serializable {
 	public String getAnchor() {
 		return anchor;
 	}
-	
+
 	public void setAnchor(String anchor) {
 		this.anchor = anchor;
 	}
 
 	/**
-	 * Returns the priority for crawling this URL.
+	 * Returns the priority for crawling this URL. 
 	 * A lower number results in higher priority.
 	 */
 	public byte getPriority() {
@@ -207,7 +214,6 @@ public class WebURL implements Serializable {
 
 	public void setPriority(byte priority) {
 		this.priority = priority;
-	}
+	}	
 
-	
 }

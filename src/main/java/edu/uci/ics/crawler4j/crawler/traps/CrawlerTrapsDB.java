@@ -24,15 +24,14 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.github.nicosensei.commons.bdb.AbstractBDB;
+import com.github.nicosensei.commons.exceptions.Unexpected;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.persist.EntityCursor;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
 import com.sleepycat.persist.StoreConfig;
-
-import fr.nikokode.commons.bdb.AbstractBDB;
-import fr.nikokode.commons.exceptions.Unexpected;
 
 /**
  * Stores crawler traps in a BDB, and offers access methods.
@@ -154,7 +153,7 @@ public class CrawlerTrapsDB extends AbstractBDB {
 
     /**
      * Tests if the given URL is a crawler trap.
-     * @param uri the URL to test
+     * @param url the URL to test
      * @return whether the given URL is a crawler trap.
      */
     public boolean isCrawlerTrap(String url) {
