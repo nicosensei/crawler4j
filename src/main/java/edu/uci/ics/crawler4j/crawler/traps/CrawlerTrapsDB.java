@@ -22,7 +22,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.github.nicosensei.commons.bdb.AbstractBDB;
 import com.github.nicosensei.commons.exceptions.Unexpected;
@@ -44,7 +45,7 @@ public class CrawlerTrapsDB extends AbstractBDB {
     /**
      * The class logger
      */
-    private static final Logger LOGGER = Logger.getLogger(CrawlerTrapsDB.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CrawlerTrapsDB.class);
 
     /**
      * Default cache percentage.
@@ -99,7 +100,7 @@ public class CrawlerTrapsDB extends AbstractBDB {
             try {
                 trapStore.close();
             } catch (final DatabaseException e) {
-                LOGGER.error(e);
+                LOGGER.error(e.getLocalizedMessage(), e);
             }
         }
     }
@@ -120,7 +121,7 @@ public class CrawlerTrapsDB extends AbstractBDB {
             LOGGER.info("Initialized crawler traps store (allowCreate="
                     + allowCreate + ").");
         } catch (final DatabaseException e) {
-            LOGGER.error(e);
+        	LOGGER.error(e.getLocalizedMessage(), e);
             throw new Unexpected(e); // TODO proper exception handling
         }
 

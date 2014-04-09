@@ -22,7 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
@@ -44,7 +45,7 @@ import edu.uci.ics.crawler4j.util.IO;
  */
 public abstract class CrawlController<T extends WebCrawler> extends Configurable {
 
-	static final Logger logger = Logger.getLogger(CrawlController.class.getName());
+	static final Logger logger = LoggerFactory.getLogger(CrawlController.class.getName());
 
 	/**
 	 * The 'customData' object can be used for passing custom crawl-related
