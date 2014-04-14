@@ -24,9 +24,12 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.tika.metadata.DublinCore;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.parser.html.HtmlParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import edu.uci.ics.crawler4j.crawler.CrawlConfig;
 import edu.uci.ics.crawler4j.crawler.Page;
@@ -37,6 +40,8 @@ import edu.uci.ics.crawler4j.url.WebURL;
  * @author Yasser Ganjisaffar <lastname at gmail dot com>
  */
 public class DefaultParser extends Parser {
+	
+	protected static final Logger logger = LoggerFactory.getLogger(DefaultParser.class.getName());
 
 	private HtmlParser htmlParser;
 	private ParseContext parseContext;
@@ -58,14 +63,14 @@ public class DefaultParser extends Parser {
 			inputStream = new ByteArrayInputStream(page.getContentData());
 			htmlParser.parse(inputStream, contentHandler, metadata, parseContext);
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error(e.getMessage() + ", while parsing: " + page.getWebURL().getURL());
 		} finally {
 			try {
 				if (inputStream != null) {
 					inputStream.close();
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
+			} catch (final IOException e) {
+				logger.error(e.getMessage() + ", while parsing: " + page.getWebURL().getURL());
 			}
 		}
 
@@ -75,9 +80,9 @@ public class DefaultParser extends Parser {
 
 		HtmlParseData parseData = new HtmlParseData();
 		parseData.setText(contentHandler.getBodyText().trim());
-		parseData.setTitle(metadata.get(Metadata.TITLE));
+		parseData.setTitle(metadata.get(DublinCore.TITLE));
 
-		List<WebURL> outgoingUrls = new ArrayList<WebURL>();
+		List<WebURL> outgoingUrls = new ArrayList<>();
 
 		String baseURL = contentHandler.getBaseUrl();
 		if (baseURL != null) {
@@ -95,7 +100,8 @@ public class DefaultParser extends Parser {
 			if (href.startsWith("http://")) {
 				hrefWithoutProtocol = href.substring(7);
 			}
-			if (!hrefWithoutProtocol.contains("javascript:") && !hrefWithoutProtocol.contains("@")) {
+			if (!hrefWithoutProtocol.contains("javascript:") && !hrefWithoutProtocol.contains("mailto:")
+					&& !hrefWithoutProtocol.contains("@")) {
 				String url = URLCanonicalizer.getCanonicalURL(href, contextURL);
 				if (url != null) {
 					WebURL webURL = new WebURL();
@@ -111,13 +117,18 @@ public class DefaultParser extends Parser {
 		}
 
 		parseData.setOutgoingUrls(outgoingUrls);
-		
-		if (page.getContentCharset() == null) {
-			parseData.setHtml(new String(page.getContentData()));
-		} else {
-			parseData.setHtml(new String(page.getContentData(), page.getContentCharset()));
+
+		try {
+			if (page.getContentCharset() == null) {
+				parseData.setHtml(new String(page.getContentData()));
+			} else {
+				parseData.setHtml(new String(page.getContentData(), page.getContentCharset()));
+			}
+		} catch (UnsupportedEncodingException e) {
+			logger.error(e.getMessage() + ", while parsing: " + page.getWebURL().getURL());
+			return parseData;
 		}
-		
+
 		return parseData;
 	}
 
